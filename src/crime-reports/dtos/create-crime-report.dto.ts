@@ -1,5 +1,6 @@
-import { IsString, IsNumber, IsEnum, IsOptional, IsDateString, IsArray } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNumber, IsEnum, IsOptional, IsDateString, IsArray, Min, Max, IsLatitude, IsLongitude } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { CrimeType } from '../../enums/crime-type.enum';
 
 export class CreateCrimeReportDto {
@@ -24,11 +25,15 @@ export class CreateCrimeReportDto {
 
     @ApiPropertyOptional({ description: 'Latitude coordinate', example: 21.0285 })
     @IsNumber()
+    @Type(() => Number)
+    @IsLatitude({ message: 'Latitude must be a valid latitude value (-90 to 90)' })
     @IsOptional()
     lat?: number;
 
     @ApiPropertyOptional({ description: 'Longitude coordinate', example: 105.8542 })
     @IsNumber()
+    @Type(() => Number)
+    @IsLongitude({ message: 'Longitude must be a valid longitude value (-180 to 180)' })
     @IsOptional()
     lng?: number;
 
@@ -69,16 +74,22 @@ export class CreateCrimeReportDto {
 
     @ApiPropertyOptional({ description: 'Array of attachment URLs', type: [String], example: ['https://example.com/image.jpg'] })
     @IsArray()
+    @IsString({ each: true, message: 'Each attachment must be a valid URL string' })
     @IsOptional()
     attachments?: string[];
 
     @ApiPropertyOptional({ description: 'Status of the report (0: active, 1: investigating, 2: resolved)', example: 0 })
     @IsNumber()
+    @Min(0, { message: 'Status must be between 0 and 2' })
+    @Max(2, { message: 'Status must be between 0 and 2' })
     @IsOptional()
     status?: number;
 
     @ApiPropertyOptional({ description: 'Severity level (1-5)', example: 3 })
     @IsNumber()
+    @Type(() => Number)
+    @Min(1, { message: 'Severity must be between 1 and 5' })
+    @Max(5, { message: 'Severity must be between 1 and 5' })
     @IsOptional()
     severity?: number;
 

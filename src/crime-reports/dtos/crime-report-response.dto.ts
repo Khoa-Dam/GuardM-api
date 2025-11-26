@@ -9,13 +9,21 @@ export interface CrimeReportResponse {
     lat: number;
     lng: number;
     address: string;
+    areaCode?: string;
     province: string;
     district: string;
     ward?: string;
     street?: string;
+    source: string;
+    attachments?: string[];
     status: number;
     severity: number;
     severityLevel: 'low' | 'medium' | 'high';
+    trustScore: number;
+    verificationLevel: string;
+    confirmationCount: number;
+    disputeCount: number;
+    reportedAt?: Date;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -35,13 +43,21 @@ export function mapToCrimeReportResponse(report: CrimeReport): CrimeReportRespon
         lat: report.lat,
         lng: report.lng,
         address: report.address,
+        areaCode: report.areaCode,
         province: report.province,
         district: report.district,
         ward: report.ward,
         street: report.street,
+        source: report.source,
+        attachments: report.attachments,
         status: report.status,
         severity: report.severity,
         severityLevel,
+        trustScore: report.trustScore || 0,
+        verificationLevel: report.verificationLevel || 'unverified',
+        confirmationCount: report.confirmationCount || 0,
+        disputeCount: report.disputeCount || 0,
+        reportedAt: report.reportedAt,
         createdAt: report.createdAt,
         updatedAt: report.updatedAt,
     };

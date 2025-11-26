@@ -13,7 +13,7 @@ export class AppService {
 
   async getHomePageData() {
     const [wantedCriminals, wantedStatistics] = await Promise.all([
-      this.wantedCriminalsService.findAll().then(criminals => criminals.slice(0, 5)),
+      this.wantedCriminalsService.findAll().then(criminals => criminals.slice(0, 6)),
       this.getWantedCriminalsStatistics(),
     ]);
 

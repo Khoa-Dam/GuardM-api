@@ -17,17 +17,26 @@ Content-Type: application/json
   "password": "password123"
 }
 
+### 2. Login
+POST http://localhost:3001/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "nguoivn@gmail.com",
+  "password": "nguoivn"
+}
+
 ### 3. Create Crime Report - Cướp giật (ĐẦY ĐỦ - Copy accessToken từ login response vào đây)
 POST http://localhost:3001/api/crime-reports
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJiYzYyYTQ5YS1hMDI3LTQwNzEtYjhkYi1jN2Y1MjgyNTllMDAiLCJpYXQiOjE3NjM3MDgwNjAsImV4cCI6MTc2Mzc0NDA2MH0.Pgtfnzje2tqr5jFSInP4BuzTT8fqW82l5W8P-EEnBEg
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJiYzYyYTQ5YS1hMDI3LTQwNzEtYjhkYi1jN2Y1MjgyNTllMDAiLCJpYXQiOjE3NjM5OTU5OTMsImV4cCI6MTc2NDAzMTk5M30.EQBfzeWTPT4_bByvrzHku1ntIrRYtXalrndpk1TzkMo
 Content-Type: application/json
 
 {
   "title": "Cướp giật tại chợ Bến Thành",
   "description": "Bị cướp giật điện thoại lúc 20h tối khi đi bộ về nhà. Phạm nhân đi xe máy, mặc áo trắng, đội mũ bảo hiểm che mặt",
   "type": "cuop_giat",
-  "lat": 10.7769,
-  "lng": 106.7009,
+  "lat": 10.771423,
+  "lng": 106.698471,
   "address": "Chợ Bến Thành, Quận 1, TP.HCM",
   "areaCode": "700000",
   "province": "Hồ Chí Minh",
@@ -39,6 +48,8 @@ Content-Type: application/json
     "https://example.com/image1.jpg",
     "https://example.com/image2.jpg"
   ],
+  "status": 0,
+  "severity": 3,
   "reportedAt": "2025-02-11T12:00:00Z"
 }
 
@@ -54,8 +65,18 @@ Content-Type: application/json
   "lat": 10.7831,
   "lng": 106.7050,
   "address": "Công viên Lê Văn Tám, Quận 1",
+  "areaCode": "700000",
   "province": "Hồ Chí Minh",
-  "district": "Quận 1"
+  "district": "Quận 1",
+  "ward": "Phường Đa Kao",
+  "street": "Hai Bà Trưng",
+  "source": "police",
+  "attachments": [
+    "https://example.com/photo-crime-scene.jpg"
+  ],
+  "status": 1,
+  "severity": 5,
+  "reportedAt": "2025-02-09T03:30:00Z"
 }
 
 ### 3c. Create Crime Report - Trộm cắp
@@ -70,9 +91,18 @@ Content-Type: application/json
   "lat": 10.7870,
   "lng": 106.6900,
   "address": "Phường Bến Nghé, Quận 1",
+  "areaCode": "700000",
   "province": "Hồ Chí Minh",
   "district": "Quận 1",
-  "ward": "Phường Bến Nghé"
+  "ward": "Phường Bến Nghé",
+  "street": "Nguyễn Huệ",
+  "source": "user",
+  "attachments": [
+    "https://example.com/cctv-screenshot.jpg"
+  ],
+  "status": 0,
+  "severity": 2,
+  "reportedAt": "2025-02-10T08:15:00Z"
 }
 
 ### 3d. Create Crime Report - Truy nã
@@ -87,12 +117,27 @@ Content-Type: application/json
   "lat": 10.7780,
   "lng": 106.7050,
   "address": "Phố đi bộ Nguyễn Huệ, Quận 1",
+  "areaCode": "700000",
   "province": "Hồ Chí Minh",
-  "district": "Quận 1"
+  "district": "Quận 1",
+  "ward": "Phường Bến Nghé",
+  "street": "Nguyễn Huệ",
+  "source": "cctv",
+  "attachments": [
+    "https://example.com/wanted-person.jpg",
+    "https://example.com/footage.mp4"
+  ],
+  "status": 0,
+  "severity": 4,
+  "reportedAt": "2025-02-08T19:45:00Z"
 }
 
 ### 4. Get All Crime Reports
 GET http://localhost:3001/api/crime-reports
+
+### 4b. Get My Crime Reports (Copy accessToken từ login response vào đây)
+GET http://localhost:3001/api/crime-reports/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJiYzYyYTQ5YS1hMDI3LTQwNzEtYjhkYi1jN2Y1MjgyNTllMDAiLCJpYXQiOjE3NjQxMTE5MjMsImV4cCI6MTc2NDE0NzkyM30.m9iD6EDLjflTXFuy3PYR_hKBMbj8MDl7Vm3OlKTx93Q
 
 ### 5. Get Nearby Alerts
 GET http://localhost:3001/api/crime-reports/nearby?lat=10.7769&lng=106.7009&radius=5
@@ -118,8 +163,30 @@ GET http://localhost:3001/api/home
 ### 10. Scrape Wanted Criminals from Bộ Công An (ADMIN ONLY)
 ### Lưu ý: Cần login với tài khoản admin, copy accessToken vào đây
 POST http://localhost:3001/api/scraper/wanted-criminals?pages=5
-Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN_HERE
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmMmY4MDMwZi0wOGFhLTQ3Y2ItOWFhYy1hMTViZTgyM2JjNDciLCJpYXQiOjE3NjQxNjA2NzksImV4cCI6MTc2NDE5NjY3OX0.Ro4DD9ziG0Fb_fXo4GXGNAEaBXUDpA2JlQy5w4irfLE
 Content-Type: application/json
 
-### 11. Get Scraper Cron Status
+### 11. Get Scraper Cron Status (All Scrapers)
 GET http://localhost:3001/api/scraper/status
+
+### 11b. Get Weather Scraper Status Only
+GET http://localhost:3001/api/scraper/weather-status
+
+### 12. Scrape Weather News from NCHMF (ADMIN ONLY)
+### Lưu ý: Cần login với tài khoản admin, copy accessToken vào đây
+### Scrape cả 2 tab: "Tin cảnh báo thiên tai" và "Tin khí tượng thủy văn"
+POST http://localhost:3001/api/scraper/weather-news
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmMmY4MDMwZi0wOGFhLTQ3Y2ItOWFhYy1hMTViZTgyM2JjNDciLCJpYXQiOjE3NjQxNjA2NzksImV4cCI6MTc2NDE5NjY3OX0.Ro4DD9ziG0Fb_fXo4GXGNAEaBXUDpA2JlQy5w4irfLE
+Content-Type: application/json
+
+### 13. Get All Weather News
+GET http://localhost:3001/api/weather-news
+
+### 13b. Get Weather News - Disaster Warnings Only (Tin cảnh báo thiên tai)
+GET http://localhost:3001/api/weather-news?type=disaster_warning
+
+### 13c. Get Weather News - Weather Forecasts Only (Tin khí tượng thủy văn)
+GET http://localhost:3001/api/weather-news?type=weather_forecast
+
+### 14. Get Weather News by ID
+GET http://localhost:3001/api/weather-news/YOUR_WEATHER_NEWS_ID_HERE

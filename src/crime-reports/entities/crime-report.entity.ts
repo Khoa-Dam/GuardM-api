@@ -1,6 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { CrimeType } from '../../enums/crime-type.enum';
+import { VerificationLevel } from '../../enums/verification-level.enum';
 
 @Entity('crime_reports')
 export class CrimeReport {
@@ -68,6 +69,28 @@ export class CrimeReport {
 
     @Column({ type: 'timestamp', nullable: true })
     reportedAt: Date;
+
+    @Column({ type: 'smallint', default: 0 })
+    trustScore: number; // 0-100 điểm tin cậy
+
+    @Column({
+        type: 'enum',
+        enum: VerificationLevel,
+        default: VerificationLevel.UNVERIFIED,
+    })
+    verificationLevel: VerificationLevel;
+
+    @Column({ nullable: true })
+    verifiedBy: string; // Admin ID who manually verified
+
+    @Column({ type: 'timestamp', nullable: true })
+    verifiedAt: Date;
+
+    @Column({ type: 'int', default: 0 })
+    confirmationCount: number; // Số user confirm report này
+
+    @Column({ type: 'int', default: 0 })
+    disputeCount: number; // Số user dispute report này
 
     @CreateDateColumn()
     createdAt: Date;

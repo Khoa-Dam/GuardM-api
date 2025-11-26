@@ -7,10 +7,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './users/entities/user.entity';
 import { RefreshToken } from './auth/entities/refresh-token.entity';
 import { CrimeReport } from './crime-reports/entities/crime-report.entity';
+import { ReportVote } from './crime-reports/entities/report-vote.entity';
 import { WantedCriminal } from './wanted-criminals/entities/wanted-criminal.entity';
+import { WeatherNews } from './weather-news/entities/weather-news.entity';
 import { CrimeReportsModule } from './crime-reports/crime-reports.module';
 import { WantedCriminalsModule } from './wanted-criminals/wanted-criminals.module';
 import { ScraperModule } from './scraper/scraper.module';
+import { WeatherNewsModule } from './weather-news/weather-news.module';
+import { HealthModule } from './health/health.module';
 import { InjectConnection } from '@nestjs/typeorm';
 import { Connection } from 'typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -44,7 +48,7 @@ import configuration from './config/config';
           username: db.user,
           password: db.password,
           database: db.name,
-          entities: [User, RefreshToken, CrimeReport, WantedCriminal],
+          entities: [User, RefreshToken, CrimeReport, ReportVote, WantedCriminal, WeatherNews],
           synchronize: process.env.NODE_ENV !== 'production',
         };
       },
@@ -54,6 +58,8 @@ import configuration from './config/config';
     CrimeReportsModule,
     WantedCriminalsModule,
     ScraperModule,
+    WeatherNewsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
