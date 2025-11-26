@@ -50,6 +50,10 @@ import configuration from './config/config';
           database: db.name,
           entities: [User, RefreshToken, CrimeReport, ReportVote, WantedCriminal, WeatherNews],
           synchronize: process.env.NODE_ENV !== 'production',
+          ssl: process.env.NODE_ENV === 'production' || process.env.DB_SSL === 'true',
+          extra: (process.env.NODE_ENV === 'production' || process.env.DB_SSL === 'true')
+            ? { ssl: { rejectUnauthorized: false } }
+            : undefined,
         };
       },
     }),
