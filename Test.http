@@ -190,3 +190,74 @@ GET http://localhost:3001/api/weather-news?type=weather_forecast
 
 ### 14. Get Weather News by ID
 GET http://localhost:3001/api/weather-news/YOUR_WEATHER_NEWS_ID_HERE
+
+### ========================================
+### ADMIN APIs - Cần login với tài khoản Admin
+### ========================================
+
+### 15. Admin - Get All Users (ADMIN ONLY)
+GET http://localhost:3001/api/users
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN_HERE
+
+### 16. Admin - Get User by ID (ADMIN ONLY)
+GET http://localhost:3001/api/users/YOUR_USER_ID_HERE
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN_HERE
+
+### 17. Admin - Create User (ADMIN ONLY)
+POST http://localhost:3001/api/users
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "name": "Nguyễn Văn B",
+  "email": "user2@example.com",
+  "password": "password123",
+  "role": "User"
+}
+
+### 18. Admin - Update User (ADMIN ONLY)
+PUT http://localhost:3001/api/users/YOUR_USER_ID_HERE
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "name": "Nguyễn Văn B Updated",
+  "email": "user2updated@example.com"
+}
+
+### 19. Admin - Delete User (ADMIN ONLY)
+DELETE http://localhost:3001/api/users/YOUR_USER_ID_HERE
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN_HERE
+
+### 20. Admin - Create Wanted Criminal (ADMIN ONLY)
+POST http://localhost:3001/api/wanted-criminals
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "name": "Nguyễn Văn C",
+  "birthYear": 1985,
+  "address": "TP. Hồ Chí Minh",
+  "parents": "Nguyễn Văn D",
+  "crime": "Cướp tài sản",
+  "decisionNumber": "456/2025/QĐ-BCA",
+  "issuingUnit": "Bộ Công An"
+}
+
+### 21. Admin - Update Wanted Criminal (ADMIN ONLY)
+PUT http://localhost:3001/api/wanted-criminals/YOUR_WANTED_CRIMINAL_ID_HERE
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "crime": "Cướp tài sản - Đã bắt",
+  "address": "Trại giam X"
+}
+
+### 22. Admin - Delete Wanted Criminal (ADMIN ONLY)
+DELETE http://localhost:3001/api/wanted-criminals/YOUR_WANTED_CRIMINAL_ID_HERE
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN_HERE
+
+### 23. Admin - Verify Crime Report (ADMIN ONLY)
+PUT http://localhost:3001/api/crime-reports/YOUR_CRIME_REPORT_ID_HERE/verify
+Authorization: Bearer YOUR_ADMIN_ACCESS_TOKEN_HERE

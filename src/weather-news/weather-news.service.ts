@@ -54,6 +54,12 @@ export class WeatherNewsService {
         return this.create(newsData);
     }
 
+    async update(id: string, updateData: Partial<WeatherNews>): Promise<WeatherNews> {
+        const news = await this.findOne(id);
+        Object.assign(news, updateData);
+        return this.weatherNewsRepository.save(news);
+    }
+
     async delete(id: string): Promise<void> {
         await this.weatherNewsRepository.delete(id);
     }

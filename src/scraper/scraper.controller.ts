@@ -30,13 +30,30 @@ export class ScraperController {
     @Roles(Role.Admin)
     @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'Trigger scraping wanted criminals from Bộ Công An website (Admin only)' })
-    @ApiQuery({ name: 'pages', description: 'Number of pages to scrape', required: false })
+    @ApiQuery({ name: 'pages', description: 'Number of pages to scrape (deprecated, use limit)', required: false })
+    @ApiQuery({ name: 'limit', description: 'Number of items to scrape', required: false })
     @ApiResponse({ status: 200, description: 'Scraping completed successfully' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
-    async scrapeWantedCriminals(@Query('pages') pages?: string) {
-        const maxPages = pages ? parseInt(pages, 10) : 5;
-        const criminals = await this.scraperService.scrapeWantedCriminals(maxPages);
+    async scrapeWantedCriminals(
+        @Query('pages') pages?: string,
+        @Query('limit') limit?: string,
+    ) {
+        // If limit is provided, use it. Otherwise fall back to pages logic (default 5 pages ~ 50 items)
+        // For backward compatibility, if pages is provided but limit is not, we can estimate limit = pages * 10
+        // But better to just pass both or handle in service.
+        // Let's simplify: if limit is present, use it. If not, use pages (default 5).
+
+        let targetLimit: number | undefined;
+        let targetPages: number = 5;
+
+        if (limit) {
+            targetLimit = parseInt(limit, 10);
+        } else if (pages) {
+            targetPages = parseInt(pages, 10);
+        }
+
+        const criminals = await this.scraperService.scrapeWantedCriminals(targetPages, targetLimit);
 
         return {
             success: true,

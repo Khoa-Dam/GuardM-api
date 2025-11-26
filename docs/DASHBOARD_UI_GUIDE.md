@@ -454,4 +454,11 @@ Tài liệu này mô tả chi tiết các thành phần cần thiết cho Dashbo
 
 **Last Updated**: 2025-11-26
 
+---
+
+## 📚 11. RELATED DOCUMENTATION
+
+- [Admin API Guide](./ADMIN_API_GUIDE.md) - Chi tiết tất cả API Admin
+- [API Messages](./API_MESSAGES.md) - Tất cả messages và error responses
+
 

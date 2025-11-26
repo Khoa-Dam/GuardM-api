@@ -11,13 +11,16 @@ export class ScraperService {
     /**
      * Scrape all wanted criminals from Bộ Công An website
      */
-    async scrapeWantedCriminals(maxPages: number = 10): Promise<Partial<WantedCriminal>[]> {
+    async scrapeWantedCriminals(maxPages: number = 10, limit?: number): Promise<Partial<WantedCriminal>[]> {
         const criminals: Partial<WantedCriminal>[] = [];
+        // If limit is provided, we might need more pages than maxPages default.
+        // Let's set a high maxPages if limit is present, or just loop until limit.
+        const effectiveMaxPages = limit ? 1000 : maxPages;
 
         try {
             // Scrape main listing pages
-            for (let page = 1; page <= maxPages; page++) {
-                this.logger.log(`Scraping page ${page}/${maxPages}...`);
+            for (let page = 1; page <= effectiveMaxPages; page++) {
+                this.logger.log(`Scraping page ${page}...`);
 
                 const pageCriminals = await this.scrapePage(page);
                 if (pageCriminals.length === 0) {
@@ -26,6 +29,14 @@ export class ScraperService {
                 }
 
                 criminals.push(...pageCriminals);
+
+                // Check if we reached the limit
+                if (limit && criminals.length >= limit) {
+                    // Slice to exact limit
+                    const limitedCriminals = criminals.slice(0, limit);
+                    this.logger.log(`Reached limit of ${limit} criminals, stopping.`);
+                    return limitedCriminals;
+                }
 
                 // Add delay to be respectful
                 await this.delay(1000);
