@@ -1,35 +1,55 @@
+version: '3.8'
+
 services:
+  # --- SERVICE 1: BACKEND (NESTJS) ---
+  api:
+    container_name: guardm_api
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    # Dòng này bắt buộc để load file .env vào container
+    env_file:
+      - .env
+    environment:
+      # Map các biến từ file .env vào trong App
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+      - CLOUDINARY_NAME=${CLOUDINARY_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # --- SERVICE 2: DATABASE (POSTGIS) ---
   db:
     image: postgis/postgis:latest
+    container_name: guardm_db
     restart: always
+    # Load file .env để lấy user/pass tạo DB
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: crime_alert
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5435:5432"
+      - "5435:5432" # Kết nối từ ngoài vào qua cổng 5435
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d crime_alert"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    restart: always
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "5050:80"
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-
 volumes:
   pgdata:
-  pgadmin_data:
