@@ -6,7 +6,11 @@ import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  app.enableCors({
+    origin: process.env.NODE_ENV === 'production' ? 'https://www.guardm.space' : 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    credentials: true,
+  });
 
   // Increase body size limit to 100MB for videos and large files
   app.use(bodyParser.json({ limit: '100mb' }));
