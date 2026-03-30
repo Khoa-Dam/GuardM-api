@@ -7,19 +7,19 @@ services:
     build: .
     restart: always
     ports:
-      - "3000:3000"
+      - "3001:3000"
     # Dòng này bắt buộc để load file .env vào container
     env_file:
       - .env
     environment:
       # Map các biến từ file .env vào trong App
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
+      - DB_HOST=db
+      - DB_PORT=5432
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
       - NODE_ENV=${NODE_ENV}
-      - PORT=${PORT}
+      - PORT=3000
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
       - CLOUDINARY_NAME=${CLOUDINARY_NAME}
