@@ -73,4 +73,5 @@ jobs:
             --set-env-vars="JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}" \
             --set-env-vars="CLOUDINARY_NAME=${{ secrets.CLOUDINARY_NAME }}" \
             --set-env-vars="CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}" \
-            --set-env-vars="CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}"
+            --set-env-vars="CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" \
+            --set-env-vars="GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}"
