@@ -12,8 +12,11 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
-  password: string;
+  @Column({ nullable: true })
+  password: string | null;
+
+  @Column({ nullable: true })
+  googleId: string | null;
 
   @Column({
     type: 'enum',

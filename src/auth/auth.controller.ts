@@ -5,6 +5,7 @@ import { SignupDto } from './dtos/signup.dto';
 import { LoginDto } from './dtos/login.dto';
 import { RefreshTokenDto } from './dtos/refresh-tokens.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
+import { GoogleAuthDto } from './dtos/google-auth.dto';
 import { AuthGuard } from './guards/auth.guard';
 
 @ApiTags('auth')
@@ -37,6 +38,15 @@ export class AuthController {
     @ApiResponse({ status: 401, description: 'Invalid refresh token' })
     async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto) {
         return this.authService.refreshTokens(refreshTokenDto.refreshToken);
+    }
+
+    @Post('google')
+    @ApiOperation({ summary: 'Login or register with Google OAuth' })
+    @ApiBody({ type: GoogleAuthDto })
+    @ApiResponse({ status: 200, description: 'Login successful' })
+    @ApiResponse({ status: 401, description: 'Invalid Google token' })
+    async googleLogin(@Body() googleAuthDto: GoogleAuthDto) {
+        return this.authService.googleLogin(googleAuthDto.idToken);
     }
 
     @UseGuards(AuthGuard)

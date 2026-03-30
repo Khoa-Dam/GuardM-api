@@ -15,6 +15,7 @@ import { JwtService } from '@nestjs/jwt';
 import { MoreThan } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Role } from './enums/role.enum';
+import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class AuthService {
@@ -60,6 +61,11 @@ export class AuthService {
             throw new UnauthorizedException('Wrong credentials');
         }
 
+        // Google-only account (no password set)
+        if (!user.password) {
+            throw new UnauthorizedException('Tài khoản này đăng nhập bằng Google. Vui lòng dùng nút "Đăng nhập với Google".');
+        }
+
         // Compare entered password with existing password
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) {
@@ -67,6 +73,49 @@ export class AuthService {
         }
 
         // Generate JWT tokens
+        const tokens = await this.generateUserTokens(user.id);
+        return {
+            ...tokens,
+            userId: user.id,
+            role: user.role,
+        };
+    }
+
+    async googleLogin(idToken: string) {
+        const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+        // Verify Google ID token
+        const ticket = await client.verifyIdToken({
+            idToken,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload || !payload.email) {
+            throw new UnauthorizedException('Google token không hợp lệ');
+        }
+
+        const { email, name, sub: googleId } = payload;
+
+        // Find existing user by email
+        let user = await this.userRepository.findOne({ where: { email } });
+
+        if (user) {
+            // Link Google account if not already linked
+            if (!user.googleId) {
+                await this.userRepository.update(user.id, { googleId });
+            }
+        } else {
+            // Create new user (no password for Google-only accounts)
+            user = await this.userRepository.save({
+                name: name || email,
+                email,
+                password: null,
+                googleId,
+                role: Role.User,
+            });
+        }
+
         const tokens = await this.generateUserTokens(user.id);
         return {
             ...tokens,
