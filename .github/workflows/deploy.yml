@@ -64,7 +64,6 @@ jobs:
             --port 3000 \
             --add-cloudsql-instances=project-8183d858-7861-4159-b3b:us-central1:guardm-db \
             --set-env-vars="NODE_ENV=production" \
-            --set-env-vars="PORT=3000" \
             --set-env-vars="DB_HOST=/cloudsql/project-8183d858-7861-4159-b3b:us-central1:guardm-db" \
             --set-env-vars="DB_PORT=5432" \
             --set-env-vars="DB_USER=postgres" \
