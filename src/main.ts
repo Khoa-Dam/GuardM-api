@@ -6,8 +6,11 @@ import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const isDev = process.env.NODE_ENV === 'development';
   app.enableCors({
-    origin: ['https://guardm.space'],
+    origin: isDev
+      ? ['http://localhost:3000', 'http://127.0.0.1:3000']
+      : ['https://guardm.space'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
   });

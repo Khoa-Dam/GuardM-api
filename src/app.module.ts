@@ -15,6 +15,11 @@ import { WantedCriminalsModule } from './wanted-criminals/wanted-criminals.modul
 import { ScraperModule } from './scraper/scraper.module';
 import { WeatherNewsModule } from './weather-news/weather-news.module';
 import { HealthModule } from './health/health.module';
+import { AiModule } from './ai/ai.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { PushSubscription } from './notifications/entities/push-subscription.entity';
+import { GlobalAlertsModule } from './global-alerts/global-alerts.module';
+import { GlobalAlert } from './global-alerts/entities/global-alert.entity';
 import { InjectConnection } from '@nestjs/typeorm';
 import { Connection } from 'typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -22,6 +27,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './config/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { GatewaysModule } from './gateways/gateways.module';
 
 @Module({
   imports: [
@@ -31,6 +38,7 @@ import configuration from './config/config';
       load: [configuration],
     }),
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -48,7 +56,7 @@ import configuration from './config/config';
           username: db.user,
           password: db.password,
           database: db.name,
-          entities: [User, RefreshToken, CrimeReport, ReportVote, WantedCriminal, WeatherNews],
+          entities: [User, RefreshToken, CrimeReport, ReportVote, WantedCriminal, WeatherNews, PushSubscription, GlobalAlert],
           synchronize: true,
           ssl: false,
           // extra: (process.env.NODE_ENV === 'production' || process.env.DB_SSL === 'true')
@@ -64,6 +72,10 @@ import configuration from './config/config';
     ScraperModule,
     WeatherNewsModule,
     HealthModule,
+    AiModule,
+    NotificationsModule,
+    GlobalAlertsModule,
+    GatewaysModule,
   ],
   controllers: [AppController],
   providers: [AppService],

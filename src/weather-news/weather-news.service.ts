@@ -74,6 +74,41 @@ export class WeatherNewsService {
     }
 
     /**
+     * Delete weather news items older than N days
+     * Uses publishedDate if available, falls back to createdAt
+     */
+    async deleteOlderThan(days: number): Promise<number> {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+
+        // Delete items where publishedDate < cutoff (or publishedDate is null and createdAt < cutoff)
+        const result = await this.weatherNewsRepository
+            .createQueryBuilder()
+            .delete()
+            .where(
+                '(published_date IS NOT NULL AND published_date < :cutoff) OR (published_date IS NULL AND created_at < :cutoff)',
+                { cutoff },
+            )
+            .execute();
+
+        const deleted = result.affected ?? 0;
+        if (deleted > 0) {
+            this.logger.log(`🗑️  Deleted ${deleted} weather news items older than ${days} days`);
+        }
+        return deleted;
+    }
+
+    /**
+     * Delete all weather news (both types)
+     */
+    async deleteAll(): Promise<number> {
+        const result = await this.weatherNewsRepository.createQueryBuilder().delete().execute();
+        const deleted = result.affected ?? 0;
+        this.logger.log(`🗑️  Deleted all ${deleted} weather news items`);
+        return deleted;
+    }
+
+    /**
      * Find and delete old duplicate news with same normalized title but different sourceUrl
      */
     async deleteOldDuplicates(newNews: Partial<WeatherNews>): Promise<number> {

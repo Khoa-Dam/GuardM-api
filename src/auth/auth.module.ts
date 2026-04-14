@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { AuthGuard } from './guards/auth.guard';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 
 @Module({
-  providers: [AuthService],
+  providers: [AuthService, AuthGuard],
   controllers: [AuthController],
   imports: [
     TypeOrmModule.forFeature([User, RefreshToken]),
@@ -16,6 +17,7 @@ import { RefreshToken } from './entities/refresh-token.entity';
       secret: process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production',
       signOptions: { expiresIn: '1h' },
     }),
-  ]
+  ],
+  exports: [AuthGuard],
 })
 export class AuthModule { }

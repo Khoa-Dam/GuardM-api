@@ -3,6 +3,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { CrimeType } from '../enums/crime-type.enum';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiQuery, ApiParam, ApiConsumes } from '@nestjs/swagger';
 import { CrimeReportsService } from './crime-reports.service';
+import { CommunityVotingService } from './community-voting.service';
 import { CreateCrimeReportDto } from './dtos/create-crime-report.dto';
 import { UpdateCrimeReportDto } from './dtos/update-crime-report.dto';
 import { AuthGuard } from '../auth/guards/auth.guard';
@@ -16,6 +17,7 @@ import { CloudinaryService } from '../cloudinary/cloudinary.service';
 export class CrimeReportsController {
     constructor(
         private readonly crimeReportsService: CrimeReportsService,
+        private readonly communityVotingService: CommunityVotingService,
         private readonly cloudinaryService: CloudinaryService) { }
 
     private readonly logger = new Logger(CrimeReportsController.name);
@@ -337,7 +339,7 @@ export class CrimeReportsController {
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Crime report not found' })
     async confirmReport(@Param('id') id: string, @Req() req: any) {
-        return this.crimeReportsService.confirmReport(id, req.user.userId);
+        return this.communityVotingService.confirmReport(id, req.user.userId);
     }
 
     @UseGuards(AuthGuard)
@@ -350,7 +352,7 @@ export class CrimeReportsController {
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Crime report not found' })
     async disputeReport(@Param('id') id: string, @Req() req: any) {
-        return this.crimeReportsService.disputeReport(id, req.user.userId);
+        return this.communityVotingService.disputeReport(id, req.user.userId);
     }
 
     @UseGuards(AuthGuard)
@@ -366,6 +368,6 @@ export class CrimeReportsController {
         if (!userId) {
             throw new BadRequestException('User identification failed');
         }
-        return this.crimeReportsService.getVoteStatus(id, userId);
+        return this.communityVotingService.getVoteStatus(id, userId);
     }
 }

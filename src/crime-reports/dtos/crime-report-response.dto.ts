@@ -3,6 +3,8 @@ import { CrimeReport } from '../entities/crime-report.entity';
 export interface CrimeReportResponse {
     id: string;
     reporterId: string;
+    reporterAvatar?: string;
+    reporterName?: string;
     title: string;
     description: string;
     type: string;
@@ -37,6 +39,8 @@ export function mapToCrimeReportResponse(report: CrimeReport): CrimeReportRespon
     return {
         id: report.id,
         reporterId: report.reporterId,
+        reporterAvatar: report.reporter?.avatar ?? undefined,
+        reporterName: report.reporter?.name ?? undefined,
         title: report.title,
         description: report.description,
         type: report.type,

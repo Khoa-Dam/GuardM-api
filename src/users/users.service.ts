@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
+import { UpdateMeDto } from './dtos/update-me.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../auth/enums/role.enum';
 
@@ -48,7 +49,7 @@ export class UsersService {
 
     async findAll(): Promise<Omit<User, 'password'>[]> {
         return this.userRepository.find({
-            select: ['id', 'name', 'email', 'role'],
+            select: ['id', 'name', 'email', 'role', 'avatar'],
             order: { name: 'ASC' },
         });
     }
@@ -56,12 +57,40 @@ export class UsersService {
     async findOne(id: string): Promise<Omit<User, 'password'>> {
         const user = await this.userRepository.findOne({
             where: { id },
-            select: ['id', 'name', 'email', 'role'],
+            select: ['id', 'name', 'email', 'role', 'avatar'],
         });
         if (!user) {
             throw new NotFoundException('User not found');
         }
         return user;
+    }
+
+    async findMe(userId: string): Promise<Omit<User, 'password'>> {
+        const user = await this.userRepository.findOne({
+            where: { id: userId },
+            select: ['id', 'name', 'email', 'role', 'avatar', 'googleId'],
+        });
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+        return user;
+    }
+
+    async updateMe(userId: string, updateDto: UpdateMeDto): Promise<Omit<User, 'password'>> {
+        const user = await this.userRepository.findOne({ where: { id: userId } });
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        const updates: Partial<User> = {};
+        if (updateDto.name !== undefined) updates.name = updateDto.name;
+        if (updateDto.avatar !== undefined) updates.avatar = updateDto.avatar;
+
+        if (Object.keys(updates).length) {
+            await this.userRepository.update(userId, updates);
+        }
+
+        return this.findMe(userId);
     }
 
     async update(id: string, updateDto: UpdateUserDto): Promise<Omit<User, 'password'>> {

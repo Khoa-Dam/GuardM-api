@@ -107,6 +107,10 @@ export class WeatherScraperCronService {
                 }
             }
 
+            // Auto-cleanup: xóa tin cũ hơn 7 ngày
+            const KEEP_DAYS = parseInt(process.env.WEATHER_NEWS_KEEP_DAYS || '7', 10);
+            const autoDeleted = await this.weatherNewsService.deleteOlderThan(KEEP_DAYS);
+
             // Save stats
             this.lastRunStats = {
                 totalScraped: scrapedNews.length,
@@ -120,6 +124,7 @@ export class WeatherScraperCronService {
             this.logger.log(`  New items: ${newItems}`);
             this.logger.log(`  Updated items: ${updatedItems}`);
             this.logger.log(`  Deleted old duplicates: ${deletedCount}`);
+            this.logger.log(`  Auto-deleted (older than ${KEEP_DAYS}d): ${autoDeleted}`);
             this.logger.log(`  Errors: ${errors}`);
 
             // Log if new items found

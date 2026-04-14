@@ -18,6 +18,9 @@ export class User {
   @Column({ type: 'varchar', nullable: true })
   googleId: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  avatar: string | null;
+
   @Column({
     type: 'enum',
     enum: Role,

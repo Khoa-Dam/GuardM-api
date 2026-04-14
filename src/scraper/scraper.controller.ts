@@ -1,5 +1,5 @@
-import { Controller, Post, Query, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { Controller, Post, Query, Get, Delete, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { ScraperService } from './scraper.service';
 import { ScraperCronService } from './scraper-cron.service';
 import { WeatherScraperService } from './weather-scraper.service';
@@ -121,6 +121,42 @@ export class ScraperController {
             errors,
             news: scrapedNews,
             message: `Đã scrape ${scrapedNews.length} tin thời tiết từ trang NCHMF (${imported} mới, ${updated} cập nhật, ${deletedCount} tin cũ đã xóa)`,
+        };
+    }
+
+    /**
+     * Xóa tin thời tiết cũ hơn N ngày (mặc định 7 ngày)
+     */
+    @Delete('weather-news/old')
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles(Role.Admin)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Xóa tin thời tiết cũ hơn N ngày (Admin only)' })
+    @ApiQuery({ name: 'days', description: 'Số ngày giữ lại (mặc định 7)', required: false })
+    async deleteOldWeatherNews(@Query('days') days?: string) {
+        const keepDays = days ? parseInt(days, 10) : 7;
+        const deleted = await this.weatherNewsService.deleteOlderThan(keepDays);
+        return {
+            success: true,
+            deleted,
+            message: `Đã xóa ${deleted} tin thời tiết cũ hơn ${keepDays} ngày`,
+        };
+    }
+
+    /**
+     * Xóa toàn bộ tin thời tiết
+     */
+    @Delete('weather-news/all')
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles(Role.Admin)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Xóa toàn bộ tin thời tiết (Admin only)' })
+    async deleteAllWeatherNews() {
+        const deleted = await this.weatherNewsService.deleteAll();
+        return {
+            success: true,
+            deleted,
+            message: `Đã xóa toàn bộ ${deleted} tin thời tiết`,
         };
     }
 

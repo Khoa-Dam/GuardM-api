@@ -78,6 +78,8 @@ export class AuthService {
             ...tokens,
             userId: user.id,
             role: user.role,
+            name: user.name,
+            avatar: user.avatar,
         };
     }
 
@@ -95,15 +97,19 @@ export class AuthService {
             throw new UnauthorizedException('Google token không hợp lệ');
         }
 
-        const { email, name, sub: googleId } = payload;
+        const { email, name, sub: googleId, picture } = payload;
 
         // Find existing user by email
         let user = await this.userRepository.findOne({ where: { email } });
 
         if (user) {
-            // Link Google account if not already linked
-            if (!user.googleId) {
-                await this.userRepository.update(user.id, { googleId });
+            // Link Google account and sync avatar if not already set
+            const updates: Partial<typeof user> = {};
+            if (!user.googleId) updates.googleId = googleId;
+            if (!user.avatar && picture) updates.avatar = picture;
+            if (Object.keys(updates).length) {
+                await this.userRepository.update(user.id, updates);
+                Object.assign(user, updates);
             }
         } else {
             // Create new user (no password for Google-only accounts)
@@ -112,6 +118,7 @@ export class AuthService {
                 email,
                 password: null,
                 googleId,
+                avatar: picture || null,
                 role: Role.User,
             });
         }
@@ -121,6 +128,8 @@ export class AuthService {
             ...tokens,
             userId: user.id,
             role: user.role,
+            name: user.name,
+            avatar: user.avatar,
         };
     }
 
@@ -175,7 +184,8 @@ export class AuthService {
     }
 
     async generateUserTokens(userId: string) {
-        const accessToken = this.jwtService.sign({ userId }, { expiresIn: '1h' });
+        const user = await this.userRepository.findOne({ where: { id: userId }, select: ['id', 'role'] });
+        const accessToken = this.jwtService.sign({ userId, role: user?.role }, { expiresIn: '1h' });
         const refreshToken = randomUUID();
 
         await this.storeRefreshToken(refreshToken, userId);
