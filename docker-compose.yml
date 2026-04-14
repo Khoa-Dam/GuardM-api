@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # --- SERVICE 1: BACKEND (NESTJS) ---
   api:
@@ -25,13 +23,14 @@ services:
       - CLOUDINARY_NAME=${CLOUDINARY_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     depends_on:
       db:
         condition: service_healthy
 
   # --- SERVICE 2: DATABASE (POSTGIS) ---
   db:
-    image: postgis/postgis:latest
+    image: postgis/postgis:16-3.4
     container_name: guardm_db
     restart: always
     # Load file .env để lấy user/pass tạo DB

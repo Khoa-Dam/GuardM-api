@@ -1,26 +1,24 @@
-# Sử dụng Node.js 20 bản nhẹ (Alpine)
-FROM node:20-alpine
+FROM node:20-alpine AS base
+RUN corepack enable pnpm
 
-# Cài đặt pnpm toàn cục
-RUN npm install -g pnpm
-
-# Thiết lập thư mục làm việc
+FROM base AS deps
 WORKDIR /app
-
-# Copy file package để cài thư viện trước (Tối ưu cache)
 COPY package.json pnpm-lock.yaml ./
-
-# Cài đặt dependencies (frozen-lockfile để đảm bảo đúng version)
 RUN pnpm install --frozen-lockfile
 
-# Copy toàn bộ code nguồn vào image
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Build code sang JavaScript (dist)
 RUN pnpm run build
 
-# Mở port 3000
-EXPOSE 3000
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
 
-# Lệnh chạy server khi container khởi động
-CMD ["pnpm", "run", "start:prod"]
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json ./package.json
+
+EXPOSE 3000
+CMD ["node", "dist/main"]
