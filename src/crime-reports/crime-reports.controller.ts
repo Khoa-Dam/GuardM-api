@@ -1,7 +1,13 @@
-import { Controller, Get, Post, Body, Param, Req, UseGuards, Query, UploadedFiles, BadRequestException, Put, Logger, Delete, UseInterceptors } from '@nestjs/common';
+import {
+    Controller, Get, Post, Body, Param, Req, UseGuards, Query,
+    UploadedFiles, BadRequestException, Put, Delete, UseInterceptors,
+} from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CrimeType } from '../enums/crime-type.enum';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody, ApiQuery, ApiParam, ApiConsumes } from '@nestjs/swagger';
+import {
+    ApiTags, ApiOperation, ApiResponse, ApiBearerAuth,
+    ApiBody, ApiQuery, ApiParam, ApiConsumes,
+} from '@nestjs/swagger';
 import { CrimeReportsService } from './crime-reports.service';
 import { CommunityVotingService } from './community-voting.service';
 import { CreateCrimeReportDto } from './dtos/create-crime-report.dto';
@@ -10,7 +16,6 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../auth/enums/role.enum';
-import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @ApiTags('crime-reports')
 @Controller('crime-reports')
@@ -18,9 +23,7 @@ export class CrimeReportsController {
     constructor(
         private readonly crimeReportsService: CrimeReportsService,
         private readonly communityVotingService: CommunityVotingService,
-        private readonly cloudinaryService: CloudinaryService) { }
-
-    private readonly logger = new Logger(CrimeReportsController.name);
+    ) {}
 
     @UseGuards(AuthGuard)
     @Post()
@@ -32,79 +35,20 @@ export class CrimeReportsController {
     @ApiResponse({ status: 201, description: 'Crime report successfully created' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     async create(
-        @UploadedFiles() files: Array<Express.Multer.File>, // Nhận danh sách file
-        @Body() createReportDto: CreateCrimeReportDto,      // Nhận data text
+        @UploadedFiles() files: Array<Express.Multer.File>,
+        @Body() createReportDto: CreateCrimeReportDto,
         @Req() req: any,
     ) {
         const reporterId = req.user?.userId;
+        if (!reporterId) throw new BadRequestException('User identification failed');
 
-        if (!reporterId) {
-            throw new BadRequestException('User identification failed');
-        }
+        const attachmentUrls = await this.crimeReportsService.processAttachments(
+            files,
+            Array.isArray(createReportDto.attachments) ? createReportDto.attachments : [],
+        );
+        createReportDto.attachments = attachmentUrls.length > 0 ? attachmentUrls : undefined;
 
-        let uploadedPublicIds: string[] = [];
-
-        try {
-            const attachmentUrls: string[] = [];
-
-            // 1. Upload files from multipart/form-data
-            if (files && files.length > 0) {
-                const uploadResults = await Promise.all(files.map(file => this.cloudinaryService.uploadImage(file)));
-
-                uploadedPublicIds = uploadResults
-                    .map(result => ('public_id' in result ? result.public_id : undefined))
-                    .filter((publicId): publicId is string => !!publicId);
-
-                const imageUrls = uploadResults.map(result => ('secure_url' in result ? result.secure_url : undefined)).filter(Boolean) as string[];
-                attachmentUrls.push(...imageUrls);
-            }
-
-            // 2. Upload base64 strings from attachments array (if any)
-            if (createReportDto.attachments && Array.isArray(createReportDto.attachments)) {
-                const base64UploadPromises = createReportDto.attachments
-                    .filter(att => typeof att === 'string' && this.cloudinaryService.isBase64DataUrl(att))
-                    .map(base64Str =>
-                        this.cloudinaryService.uploadFromBase64(base64Str)
-                            .then(result => {
-                                if ('public_id' in result) {
-                                    uploadedPublicIds.push(result.public_id);
-                                }
-                                return 'secure_url' in result ? result.secure_url : undefined;
-                            })
-                            .catch(error => {
-                                this.logger.error('Failed to upload base64 to Cloudinary', error.stack);
-                                return undefined;
-                            })
-                    );
-
-                const base64Urls = await Promise.all(base64UploadPromises);
-                attachmentUrls.push(...base64Urls.filter(Boolean) as string[]);
-            }
-
-            // 3. Keep existing URLs (non-base64) from attachments
-            if (createReportDto.attachments && Array.isArray(createReportDto.attachments)) {
-                const existingUrls = createReportDto.attachments.filter(
-                    att => typeof att === 'string' && !this.cloudinaryService.isBase64DataUrl(att)
-                ) as string[];
-                attachmentUrls.push(...existingUrls);
-            }
-
-            // 4. Set final attachments (only URLs, no base64)
-            createReportDto.attachments = attachmentUrls.length > 0 ? attachmentUrls : undefined;
-
-            return await this.crimeReportsService.create(reporterId, createReportDto);
-        } catch (error) {
-            if (uploadedPublicIds.length > 0) {
-                await Promise.all(
-                    uploadedPublicIds.map(publicId =>
-                        this.cloudinaryService.deleteImage(publicId).catch(cleanupError =>
-                            this.logger.error(`Failed to delete Cloudinary asset ${publicId}`, cleanupError.stack),
-                        ),
-                    ),
-                );
-            }
-            throw error;
-        }
+        return this.crimeReportsService.create(reporterId, createReportDto);
     }
 
     @UseGuards(AuthGuard)
@@ -126,87 +70,25 @@ export class CrimeReportsController {
         @Req() req: any,
     ) {
         const reporterId = req.user?.userId;
+        if (!reporterId) throw new BadRequestException('User identification failed');
 
-        if (!reporterId) {
-            throw new BadRequestException('User identification failed');
+        // Normalize attachments field (may arrive as JSON string from multipart)
+        let existingAttachments: string[] = [];
+        if (updateReportDto.attachments) {
+            if (typeof updateReportDto.attachments === 'string') {
+                try { existingAttachments = JSON.parse(updateReportDto.attachments); }
+                catch { existingAttachments = [updateReportDto.attachments]; }
+            } else if (Array.isArray(updateReportDto.attachments)) {
+                existingAttachments = updateReportDto.attachments;
+            }
         }
 
-        let uploadedPublicIds: string[] = [];
+        updateReportDto.attachments = await this.crimeReportsService.processAttachments(
+            files,
+            existingAttachments,
+        );
 
-        try {
-            const attachmentUrls: string[] = [];
-
-            // 1. Upload files from multipart/form-data
-            if (files && files.length > 0) {
-                const uploadResults = await Promise.all(files.map(file => this.cloudinaryService.uploadImage(file)));
-
-                uploadedPublicIds = uploadResults
-                    .map(result => ('public_id' in result ? result.public_id : undefined))
-                    .filter((publicId): publicId is string => !!publicId);
-
-                const imageUrls = uploadResults
-                    .map(result => ('secure_url' in result ? result.secure_url : undefined))
-                    .filter(Boolean) as string[];
-                attachmentUrls.push(...imageUrls);
-            }
-
-            // 2. Process existing attachments from request body (keep URLs, upload base64)
-            if (updateReportDto.attachments) {
-                // Handle case where attachments is sent as JSON string
-                let attachmentsArray: string[] = [];
-                if (typeof updateReportDto.attachments === 'string') {
-                    try {
-                        attachmentsArray = JSON.parse(updateReportDto.attachments);
-                    } catch {
-                        attachmentsArray = [updateReportDto.attachments];
-                    }
-                } else if (Array.isArray(updateReportDto.attachments)) {
-                    attachmentsArray = updateReportDto.attachments;
-                }
-
-                // Keep existing URLs (non-base64)
-                const existingUrls = attachmentsArray.filter(
-                    att => typeof att === 'string' && att.length > 0 && !this.cloudinaryService.isBase64DataUrl(att)
-                ) as string[];
-                attachmentUrls.push(...existingUrls);
-
-                // Upload base64 strings
-                const base64UploadPromises = attachmentsArray
-                    .filter(att => typeof att === 'string' && this.cloudinaryService.isBase64DataUrl(att))
-                    .map(base64Str =>
-                        this.cloudinaryService.uploadFromBase64(base64Str)
-                            .then(result => {
-                                if ('public_id' in result) {
-                                    uploadedPublicIds.push(result.public_id);
-                                }
-                                return 'secure_url' in result ? result.secure_url : undefined;
-                            })
-                            .catch(error => {
-                                this.logger.error('Failed to upload base64 to Cloudinary', error.stack);
-                                return undefined;
-                            })
-                    );
-
-                const base64Urls = await Promise.all(base64UploadPromises);
-                attachmentUrls.push(...base64Urls.filter(Boolean) as string[]);
-            }
-
-            // 3. Set final attachments - always set array (even empty) to allow deletion
-            updateReportDto.attachments = attachmentUrls;
-
-            return await this.crimeReportsService.updateReport(id, reporterId, updateReportDto);
-        } catch (error) {
-            if (uploadedPublicIds.length > 0) {
-                await Promise.all(
-                    uploadedPublicIds.map(publicId =>
-                        this.cloudinaryService.deleteImage(publicId).catch(cleanupError =>
-                            this.logger.error(`Failed to delete Cloudinary asset ${publicId}`, cleanupError.stack),
-                        ),
-                    ),
-                );
-            }
-            throw error;
-        }
+        return this.crimeReportsService.updateReport(id, reporterId, updateReportDto);
     }
 
     @UseGuards(AuthGuard)
@@ -220,22 +102,17 @@ export class CrimeReportsController {
     @ApiResponse({ status: 404, description: 'Crime report not found' })
     async remove(@Param('id') id: string, @Req() req: any) {
         const reporterId = req.user?.userId;
-
-        if (!reporterId) {
-            throw new BadRequestException('User identification failed');
-        }
-
+        if (!reporterId) throw new BadRequestException('User identification failed');
         await this.crimeReportsService.deleteReport(id, reporterId);
-
         return { message: 'Crime report deleted' };
     }
 
     @Get()
     @ApiOperation({ summary: 'Get all crime reports' })
-    @ApiQuery({ name: 'type', description: 'Filter by crime type', required: false, enum: ['truy_na', 'nghi_pham', 'dang_ngo', 'de_doa', 'giet_nguoi', 'bat_coc', 'cuop_giat', 'trom_cap'] })
+    @ApiQuery({ name: 'type', description: 'Filter by crime type', required: false })
     @ApiResponse({ status: 200, description: 'Returns all crime reports' })
     async findAll(@Query('type') type?: string) {
-        return this.crimeReportsService.findAll(type as any);
+        return this.crimeReportsService.findAll(type as CrimeType);
     }
 
     @UseGuards(AuthGuard)
@@ -246,11 +123,7 @@ export class CrimeReportsController {
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     async findMine(@Req() req: any) {
         const reporterId = req.user?.userId;
-
-        if (!reporterId) {
-            throw new BadRequestException('User identification failed');
-        }
-
+        if (!reporterId) throw new BadRequestException('User identification failed');
         return this.crimeReportsService.findByReporter(reporterId);
     }
 
@@ -286,23 +159,19 @@ export class CrimeReportsController {
 
     @Get('nearby')
     @ApiOperation({ summary: 'Get nearby crime alerts' })
-    @ApiQuery({ name: 'lat', description: 'Latitude', required: true })
-    @ApiQuery({ name: 'lng', description: 'Longitude', required: true })
-    @ApiQuery({ name: 'radius', description: 'Radius in kilometers', required: false })
+    @ApiQuery({ name: 'lat', required: true })
+    @ApiQuery({ name: 'lng', required: true })
+    @ApiQuery({ name: 'radius', required: false })
     @ApiResponse({ status: 200, description: 'Returns nearby crime alerts' })
     async getNearbyAlerts(
         @Query('lat') lat: string,
         @Query('lng') lng: string,
         @Query('radius') radius: string,
     ) {
-        const latitude = parseFloat(lat);
+        const latitude  = parseFloat(lat);
         const longitude = parseFloat(lng);
-        const radiusKm = radius ? parseFloat(radius) : 5;
-
-        if (isNaN(latitude) || isNaN(longitude)) {
-            throw new Error('Invalid latitude or longitude');
-        }
-
+        const radiusKm  = radius ? parseFloat(radius) : 5;
+        if (isNaN(latitude) || isNaN(longitude)) throw new BadRequestException('Invalid latitude or longitude');
         return this.crimeReportsService.getNearbyAlert(latitude, longitude, radiusKm);
     }
 
@@ -335,9 +204,7 @@ export class CrimeReportsController {
     @ApiOperation({ summary: 'Confirm a crime report (Community verification)' })
     @ApiParam({ name: 'id', description: 'Crime report ID' })
     @ApiResponse({ status: 200, description: 'Report confirmed' })
-    @ApiResponse({ status: 400, description: 'Không thể xác nhận báo cáo của chính mình' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
-    @ApiResponse({ status: 404, description: 'Crime report not found' })
     async confirmReport(@Param('id') id: string, @Req() req: any) {
         return this.communityVotingService.confirmReport(id, req.user.userId);
     }
@@ -348,9 +215,7 @@ export class CrimeReportsController {
     @ApiOperation({ summary: 'Dispute a crime report (Community verification)' })
     @ApiParam({ name: 'id', description: 'Crime report ID' })
     @ApiResponse({ status: 200, description: 'Report disputed' })
-    @ApiResponse({ status: 400, description: 'Không thể tranh cãi báo cáo của chính mình' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
-    @ApiResponse({ status: 404, description: 'Crime report not found' })
     async disputeReport(@Param('id') id: string, @Req() req: any) {
         return this.communityVotingService.disputeReport(id, req.user.userId);
     }
@@ -358,16 +223,13 @@ export class CrimeReportsController {
     @UseGuards(AuthGuard)
     @Get(':id/vote-status')
     @ApiBearerAuth('JWT-auth')
-    @ApiOperation({ summary: 'Get vote status of current user for a crime report' })
+    @ApiOperation({ summary: 'Get vote status for current user on a crime report' })
     @ApiParam({ name: 'id', description: 'Crime report ID' })
     @ApiResponse({ status: 200, description: 'Returns vote status' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
-    @ApiResponse({ status: 404, description: 'Crime report not found' })
     async getVoteStatus(@Param('id') id: string, @Req() req: any) {
         const userId = req.user?.userId;
-        if (!userId) {
-            throw new BadRequestException('User identification failed');
-        }
+        if (!userId) throw new BadRequestException('User identification failed');
         return this.communityVotingService.getVoteStatus(id, userId);
     }
 }

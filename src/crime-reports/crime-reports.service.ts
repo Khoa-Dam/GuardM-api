@@ -11,23 +11,15 @@ import { VerificationLevel } from '../enums/verification-level.enum';
 import { mapToCrimeReportResponse, CrimeReportResponse } from './dtos/crime-report-response.dto';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { TrustScoreService } from './trust-score.service';
-import { CRIME_DANGER_WEIGHT } from '../shared/crime-types.constants';
-import { kmToDegrees } from '../shared/geo.utils';
+import { CrimeReportAnalyticsService, CrimeHeatmapData, CrimeStatistics } from './crime-report-analytics.service';
 import {
     ReportCreatedEvent,
     ReportUpdatedEvent,
     ReportDeletedEvent,
 } from './events/crime-report.events';
 
-export interface CrimeHeatmapData {
-    latitude: number;
-    longitude: number;
-    district: string;
-    province: string;
-    crimeType: CrimeType;
-    count: number;
-    severity: 'low' | 'medium' | 'high';
-}
+// Re-export for backwards compatibility
+export type { CrimeHeatmapData };
 
 @Injectable()
 export class CrimeReportsService {
@@ -40,8 +32,75 @@ export class CrimeReportsService {
         private reportVoteRepository: Repository<ReportVote>,
         private readonly cloudinaryService: CloudinaryService,
         private readonly trustScoreService: TrustScoreService,
+        private readonly analyticsService: CrimeReportAnalyticsService,
         private readonly eventEmitter: EventEmitter2,
     ) {}
+
+    // ── Analytics delegation ──────────────────────────────────────────────────
+
+    getHeatmapData(): Promise<CrimeHeatmapData[]> {
+        return this.analyticsService.getHeatmapData();
+    }
+
+    getStatistics(): Promise<CrimeStatistics> {
+        return this.analyticsService.getStatistics();
+    }
+
+    getNearbyAlert(lat: number, lng: number, radiusKm = 5) {
+        return this.analyticsService.getNearbyAlert(lat, lng, radiusKm);
+    }
+
+    // ── Attachment processing ─────────────────────────────────────────────────
+
+    /**
+     * Upload multipart files + base64 strings to Cloudinary, keep plain URLs.
+     * Rolls back already-uploaded assets if an error occurs mid-upload.
+     */
+    async processAttachments(
+        files: Array<Express.Multer.File> = [],
+        rawAttachments: string[] = [],
+    ): Promise<string[]> {
+        const uploadedPublicIds: string[] = [];
+        const urls: string[] = [];
+
+        try {
+            if (files.length > 0) {
+                const results = await Promise.all(files.map(f => this.cloudinaryService.uploadImage(f)));
+                for (const r of results) {
+                    if ('public_id' in r) uploadedPublicIds.push(r.public_id);
+                    if ('secure_url' in r && r.secure_url) urls.push(r.secure_url);
+                }
+            }
+
+            const base64Items = rawAttachments.filter(a => this.cloudinaryService.isBase64DataUrl(a));
+            if (base64Items.length > 0) {
+                const results = await Promise.all(
+                    base64Items.map(b64 => this.cloudinaryService.uploadFromBase64(b64).catch(() => null)),
+                );
+                for (const r of results) {
+                    if (!r) continue;
+                    if ('public_id' in r) uploadedPublicIds.push(r.public_id);
+                    if ('secure_url' in r && r.secure_url) urls.push(r.secure_url);
+                }
+            }
+
+            const existingUrls = rawAttachments.filter(a => a && !this.cloudinaryService.isBase64DataUrl(a));
+            urls.push(...existingUrls);
+
+            return urls;
+        } catch (error) {
+            await Promise.all(
+                uploadedPublicIds.map(id =>
+                    this.cloudinaryService.deleteImage(id).catch(e =>
+                        this.logger.error(`Rollback: failed to delete ${id}`, e.stack),
+                    ),
+                ),
+            );
+            throw error;
+        }
+    }
+
+    // ── Write operations ──────────────────────────────────────────────────────
 
     async create(reporterId: string, createReportDto: CreateCrimeReportDto): Promise<CrimeReportResponse> {
         if (!createReportDto.title && !createReportDto.description) {
@@ -70,18 +129,93 @@ export class CrimeReportsService {
 
         const trustScore = this.trustScoreService.calculate(savedReport);
         const verificationLevel = this.trustScoreService.getVerificationLevel(trustScore);
-
         await this.crimeReportRepository.update(savedReport.id, { trustScore, verificationLevel });
 
         const updatedReport = await this.crimeReportRepository.findOne({ where: { id: savedReport.id } });
         if (!updatedReport) throw new NotFoundException('Crime report not found after update');
 
         const response = mapToCrimeReportResponse(updatedReport);
-
         this.eventEmitter.emit('report.created', new ReportCreatedEvent(response));
-
         return response;
     }
+
+    async updateReport(id: string, userId: string, updateDto: UpdateCrimeReportDto): Promise<CrimeReportResponse> {
+        const report = await this.crimeReportRepository.findOne({ where: { id } });
+        if (!report) throw new NotFoundException('Crime report not found');
+        if (report.reporterId !== userId) throw new BadRequestException('Không thể chỉnh sửa báo cáo của người khác');
+
+        if (updateDto.type && updateDto.severity === undefined) {
+            updateDto.severity = this.trustScoreService.getDefaultSeverityByType(updateDto.type);
+        }
+
+        if (updateDto.attachments !== undefined) {
+            const removedUrls = (report.attachments || []).filter(url => !updateDto.attachments!.includes(url));
+            if (removedUrls.length > 0) {
+                await Promise.all(
+                    removedUrls.map(url =>
+                        this.cloudinaryService.deleteImageByUrl(url).catch(err =>
+                            this.logger.error(`Failed to delete Cloudinary asset: ${url}`, err.stack),
+                        ),
+                    ),
+                );
+            }
+        }
+
+        const mergedReport = this.crimeReportRepository.merge(report, updateDto);
+        const savedReport  = await this.crimeReportRepository.save(mergedReport);
+
+        if (savedReport.lat && savedReport.lng) {
+            await this.updateGeom(savedReport.id, savedReport.lat, savedReport.lng);
+        }
+
+        const trustScore = this.trustScoreService.calculate(savedReport);
+        const verificationLevel = this.trustScoreService.getVerificationLevel(trustScore);
+        await this.crimeReportRepository.update(savedReport.id, { trustScore, verificationLevel });
+
+        const finalReport = await this.crimeReportRepository.findOne({ where: { id: savedReport.id } });
+        if (!finalReport) throw new NotFoundException('Crime report not found after update');
+
+        const response = mapToCrimeReportResponse(finalReport);
+        this.eventEmitter.emit('report.updated', new ReportUpdatedEvent(response));
+        return response;
+    }
+
+    async deleteReport(id: string, userId: string): Promise<void> {
+        const report = await this.crimeReportRepository.findOne({ where: { id } });
+        if (!report) throw new NotFoundException('Crime report not found');
+        if (report.reporterId !== userId) throw new BadRequestException('Không thể xóa báo cáo của người khác');
+
+        if (report.attachments && report.attachments.length > 0) {
+            await Promise.all(
+                report.attachments.map(url =>
+                    this.cloudinaryService.deleteImageByUrl(url).catch(err =>
+                        this.logger.error(`Failed to delete Cloudinary asset for report ${id}`, err.stack),
+                    ),
+                ),
+            );
+        }
+
+        await this.crimeReportRepository.delete(id);
+        this.eventEmitter.emit('report.deleted', new ReportDeletedEvent(id));
+    }
+
+    async verifyReport(id: string, adminId: string): Promise<CrimeReportResponse> {
+        const report = await this.crimeReportRepository.findOne({ where: { id } });
+        if (!report) throw new NotFoundException('Crime report not found');
+
+        await this.crimeReportRepository.update(id, {
+            verificationLevel: VerificationLevel.CONFIRMED,
+            trustScore: 100,
+            verifiedBy: adminId,
+            verifiedAt: new Date(),
+        });
+
+        const updatedReport = await this.crimeReportRepository.findOne({ where: { id } });
+        if (!updatedReport) throw new NotFoundException('Crime report not found after update');
+        return mapToCrimeReportResponse(updatedReport);
+    }
+
+    // ── Read operations ───────────────────────────────────────────────────────
 
     async findAll(type?: CrimeType): Promise<CrimeReportResponse[]> {
         const where = type ? { type } : {};
@@ -130,187 +264,6 @@ export class CrimeReportsService {
         return reports.map(mapToCrimeReportResponse);
     }
 
-    async getHeatmapData(): Promise<CrimeHeatmapData[]> {
-        const results = await this.crimeReportRepository
-            .createQueryBuilder('report')
-            .select('report.district', 'district')
-            .addSelect('report.province', 'province')
-            .addSelect('report.type', 'type')
-            .addSelect('COUNT(*)', 'count')
-            .addSelect('AVG(report.lat)', 'avgLatitude')
-            .addSelect('AVG(report.lng)', 'avgLongitude')
-            .groupBy('report.district')
-            .addGroupBy('report.province')
-            .addGroupBy('report.type')
-            .getRawMany();
-
-        return results.map((result) => {
-            const count = parseInt(result.count);
-            const dangerLevel = CRIME_DANGER_WEIGHT[result.type as keyof typeof CRIME_DANGER_WEIGHT] ?? 1;
-            const totalDangerScore = count * dangerLevel;
-
-            let severity: 'low' | 'medium' | 'high' = 'low';
-            if (totalDangerScore > 150) severity = 'high';
-            else if (totalDangerScore > 50) severity = 'medium';
-
-            return {
-                latitude:  parseFloat(result.avgLatitude || 0),
-                longitude: parseFloat(result.avgLongitude || 0),
-                district:  result.district,
-                province:  result.province,
-                crimeType: result.type,
-                count,
-                severity,
-            };
-        });
-    }
-
-    async getStatistics() {
-        const total        = await this.crimeReportRepository.count();
-        const activeAlerts = await this.crimeReportRepository.count({ where: { status: 0 } });
-        const highSeverity = await this.crimeReportRepository.count({ where: { severity: 4 } });
-
-        const byType = await this.crimeReportRepository
-            .createQueryBuilder('report')
-            .select('report.type', 'type')
-            .addSelect('COUNT(*)', 'count')
-            .groupBy('report.type')
-            .getRawMany();
-
-        const byDistrict = await this.crimeReportRepository
-            .createQueryBuilder('report')
-            .select('report.district', 'district')
-            .addSelect('COUNT(*)', 'count')
-            .groupBy('report.district')
-            .orderBy('count', 'DESC')
-            .limit(10)
-            .getRawMany();
-
-        return {
-            total,
-            activeAlerts,
-            highSeverity,
-            byType:     byType.map(i => ({ type: i.type, count: parseInt(i.count) })),
-            byDistrict: byDistrict.map(i => ({ district: i.district, count: parseInt(i.count) })),
-        };
-    }
-
-    async verifyReport(id: string, adminId: string): Promise<CrimeReportResponse> {
-        const report = await this.crimeReportRepository.findOne({ where: { id } });
-        if (!report) throw new NotFoundException('Crime report not found');
-
-        await this.crimeReportRepository.update(id, {
-            verificationLevel: VerificationLevel.CONFIRMED,
-            trustScore: 100,
-            verifiedBy: adminId,
-            verifiedAt: new Date(),
-        });
-
-        const updatedReport = await this.crimeReportRepository.findOne({ where: { id } });
-        if (!updatedReport) throw new NotFoundException('Crime report not found after update');
-        return mapToCrimeReportResponse(updatedReport);
-    }
-
-    async updateReport(id: string, userId: string, updateDto: UpdateCrimeReportDto): Promise<CrimeReportResponse> {
-        const report = await this.crimeReportRepository.findOne({ where: { id } });
-        if (!report) throw new NotFoundException('Crime report not found');
-        if (report.reporterId !== userId) throw new BadRequestException('Không thể chỉnh sửa báo cáo của người khác');
-
-        if (updateDto.type && updateDto.severity === undefined) {
-            updateDto.severity = this.trustScoreService.getDefaultSeverityByType(updateDto.type);
-        }
-
-        if (updateDto.attachments !== undefined) {
-            const removedUrls = (report.attachments || []).filter(url => !updateDto.attachments!.includes(url));
-            if (removedUrls.length > 0) {
-                await Promise.all(
-                    removedUrls.map(url =>
-                        this.cloudinaryService.deleteImageByUrl(url).catch(err => {
-                            this.logger.error(`Failed to delete Cloudinary asset: ${url}`, err.stack);
-                        }),
-                    ),
-                );
-            }
-        }
-
-        const mergedReport = this.crimeReportRepository.merge(report, updateDto);
-        const savedReport  = await this.crimeReportRepository.save(mergedReport);
-
-        if (savedReport.lat && savedReport.lng) {
-            await this.updateGeom(savedReport.id, savedReport.lat, savedReport.lng);
-        }
-
-        const trustScore = this.trustScoreService.calculate(savedReport);
-        const verificationLevel = this.trustScoreService.getVerificationLevel(trustScore);
-        await this.crimeReportRepository.update(savedReport.id, { trustScore, verificationLevel });
-
-        const finalReport = await this.crimeReportRepository.findOne({ where: { id: savedReport.id } });
-        if (!finalReport) throw new NotFoundException('Crime report not found after update');
-
-        const response = mapToCrimeReportResponse(finalReport);
-        this.eventEmitter.emit('report.updated', new ReportUpdatedEvent(response));
-        return response;
-    }
-
-    async deleteReport(id: string, userId: string): Promise<void> {
-        const report = await this.crimeReportRepository.findOne({ where: { id } });
-        if (!report) throw new NotFoundException('Crime report not found');
-        if (report.reporterId !== userId) throw new BadRequestException('Không thể xóa báo cáo của người khác');
-
-        if (report.attachments && report.attachments.length > 0) {
-            await Promise.all(
-                report.attachments.map(url =>
-                    this.cloudinaryService.deleteImageByUrl(url).catch(err => {
-                        this.logger.error(`Failed to delete Cloudinary asset for report ${id}`, err.stack);
-                    }),
-                ),
-            );
-        }
-
-        await this.crimeReportRepository.delete(id);
-        this.eventEmitter.emit('report.deleted', new ReportDeletedEvent(id));
-    }
-
-    async findByLocation(lat: number, lng: number, radiusKm = 5): Promise<CrimeReport[]> {
-        return this.crimeReportRepository
-            .createQueryBuilder('report')
-            .where(`ST_DWithin(
-                geom::geography,
-                ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
-                :radius
-            )`, { lat, lng, radius: radiusKm * 1000 })
-            .orderBy('report.createdAt', 'DESC')
-            .limit(50)
-            .getMany();
-    }
-
-    async getNearbyAlert(lat: number, lng: number, radiusKm = 5) {
-        const nearbyReports = await this.findByLocation(lat, lng, radiusKm);
-
-        if (nearbyReports.length === 0) {
-            return { hasAlert: false, message: 'Khu vực này an toàn' };
-        }
-
-        const totalDangerScore = nearbyReports.reduce((sum, r) => {
-            return sum + (CRIME_DANGER_WEIGHT[r.type as keyof typeof CRIME_DANGER_WEIGHT] ?? 1);
-        }, 0);
-
-        let alertLevel: 'low' | 'medium' | 'high' = 'low';
-        if (totalDangerScore > 150) alertLevel = 'high';
-        else if (totalDangerScore > 50) alertLevel = 'medium';
-
-        return {
-            hasAlert: true,
-            alertLevel,
-            totalReports: nearbyReports.length,
-            totalDangerScore,
-            reports: nearbyReports.map(r => ({
-                id: r.id, title: r.title, type: r.type,
-                lat: r.lat, lng: r.lng, address: r.address, createdAt: r.createdAt,
-            })),
-        };
-    }
-
     async recalculateAllTrustScores(): Promise<void> {
         const reports = await this.crimeReportRepository.find();
         for (const report of reports) {
@@ -320,7 +273,7 @@ export class CrimeReportsService {
         }
     }
 
-    // ── Private helpers ────────────────────────────────────────────────────────
+    // ── Private helpers ───────────────────────────────────────────────────────
 
     private async updateGeom(id: string, lat: number, lng: number): Promise<void> {
         await this.crimeReportRepository.query(

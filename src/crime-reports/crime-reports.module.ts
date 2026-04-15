@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CrimeReportsService } from './crime-reports.service';
 import { CrimeReportsController } from './crime-reports.controller';
+import { CrimeReportAnalyticsService } from './crime-report-analytics.service';
 import { CrimeReport } from './entities/crime-report.entity';
 import { ReportVote } from './entities/report-vote.entity';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
@@ -13,8 +14,13 @@ import { CommunityVotingService } from './community-voting.service';
         TypeOrmModule.forFeature([CrimeReport, ReportVote]),
         CloudinaryModule,
     ],
-    providers: [CrimeReportsService, TrustScoreService, CommunityVotingService],
+    providers: [
+        CrimeReportsService,
+        CrimeReportAnalyticsService,
+        TrustScoreService,
+        CommunityVotingService,
+    ],
     controllers: [CrimeReportsController],
-    exports: [CrimeReportsService],
+    exports: [CrimeReportsService, CrimeReportAnalyticsService],
 })
 export class CrimeReportsModule {}

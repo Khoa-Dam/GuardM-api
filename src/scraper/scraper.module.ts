@@ -19,12 +19,12 @@ import { User } from '../users/entities/user.entity';
     ],
     providers: [
         ScraperService,
-        ScraperCronService,
+        ScraperCronService,   // depends only on ScraperService now
         WeatherScraperService,
         WeatherScraperCronService,
     ],
     controllers: [ScraperController],
     exports: [ScraperService, WeatherScraperService],
 })
-export class ScraperModule { }
+export class ScraperModule {}
 
