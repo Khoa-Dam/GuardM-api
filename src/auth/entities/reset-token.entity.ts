@@ -3,21 +3,21 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
 @Entity('reset_tokens')
 export class ResetToken {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  token: string;
+  token!: string;
 
   @Column()
-  userId: string;
+  userId!: string;
 
   @Column()
-  expiryDate: Date;
+  expiryDate!: Date;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
 

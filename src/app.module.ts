@@ -93,7 +93,11 @@ export class AppModule implements OnModuleInit {
         await this.connection.query(migration);
         console.log('PostGIS extension and geom column added successfully');
       } catch (error) {
-        console.log('PostGIS migration error (may already exist):', error.message);
+        if (error instanceof Error) {
+          console.log('PostGIS migration error (may already exist):', error.message);
+        } else {
+          console.log('PostGIS migration error (may already exist):', error);
+        }
       }
     }
   }

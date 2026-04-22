@@ -8,42 +8,42 @@ export enum WeatherNewsType {
 @Entity('weather_news')
 export class WeatherNews {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column({ type: 'enum', enum: WeatherNewsType })
-    type: WeatherNewsType;
+    type!: WeatherNewsType;
 
     @Column()
-    title: string; // Tiêu đề tin
+    title!: string; // Tiêu đề tin
 
     @Column('text', { nullable: true })
-    summary: string; // Tóm tắt nội dung
+    summary!: string; // Tóm tắt nội dung
 
     @Column('text', { nullable: true })
-    content: string; // Nội dung đầy đủ
+    content!: string; // Nội dung đầy đủ
 
     @Column({ nullable: true })
-    imageUrl: string; // Ảnh chủ đạo
+    imageUrl!: string; // Ảnh chủ đạo
 
     @Column({ nullable: true })
-    sourceUrl: string; // Link bài gốc trên nchmf.gov.vn
+    sourceUrl!: string; // Link bài gốc trên nchmf.gov.vn
 
     @Column({ nullable: true })
-    publishedDate: Date; // Ngày đăng / Tin phát lúc
+    publishedDate!: Date; // Ngày đăng / Tin phát lúc
 
     @Column({ nullable: true })
-    nextUpdateAt: Date; // Tin phát tiếp theo lúc (khi nào sẽ có cập nhật)
+    nextUpdateAt!: Date; // Tin phát tiếp theo lúc (khi nào sẽ có cập nhật)
 
     @Column({ nullable: true })
-    location: string; // Địa điểm (ví dụ: "Biển Đông", "Đắk Lắk")
+    location!: string; // Địa điểm (ví dụ: "Biển Đông", "Đắk Lắk")
 
     @Column({ nullable: true })
-    severity: string; // Mức độ cảnh báo (ví dụ: "Bão số 15", "Lũ trên sông")
+    severity!: string; // Mức độ cảnh báo (ví dụ: "Bão số 15", "Lũ trên sông")
 
     @CreateDateColumn()
-    createdAt: Date;
+    createdAt!: Date;
 
     @UpdateDateColumn()
-    updatedAt: Date;
+    updatedAt!: Date;
 }
 

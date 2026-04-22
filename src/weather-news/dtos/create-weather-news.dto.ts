@@ -6,12 +6,12 @@ export class CreateWeatherNewsDto {
     @ApiProperty({ enum: WeatherNewsType, description: 'Type of weather news' })
     @IsEnum(WeatherNewsType)
     @IsNotEmpty()
-    type: WeatherNewsType;
+    type!: WeatherNewsType;
 
     @ApiProperty({ description: 'Title of the news' })
     @IsString()
     @IsNotEmpty()
-    title: string;
+    title!: string;
 
     @ApiPropertyOptional({ description: 'Summary of the news' })
     @IsString()

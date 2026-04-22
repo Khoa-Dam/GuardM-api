@@ -3,10 +3,17 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as bodyParser from 'body-parser';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const isDev = process.env.NODE_ENV === 'development';
+  
+  // Apply helmet for security headers
+  app.use(helmet({
+    crossOriginResourcePolicy: false, // For serving static files/images if needed across origins
+  }));
+  
   app.enableCors({
     origin: isDev
       ? ['http://localhost:3000', 'http://127.0.0.1:3000']

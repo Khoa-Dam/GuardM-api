@@ -5,12 +5,12 @@ export class CreateWantedCriminalDto {
     @ApiProperty({ description: 'Full name of the wanted person', example: 'Nguyen Van A' })
     @IsString()
     @IsNotEmpty()
-    name: string; // Họ tên đối tượng
+    name!: string; // Họ tên đối tượng
 
     @ApiProperty({ description: 'Year of birth', example: 1990 })
     @IsNumber()
     @IsNotEmpty()
-    birthYear: number; // Năm sinh
+    birthYear!: number; // Năm sinh
 
     @ApiPropertyOptional({ description: 'Registered permanent address (Nơi ĐKTT)', example: 'Hanoi, Vietnam' })
     @IsString()
@@ -25,7 +25,7 @@ export class CreateWantedCriminalDto {
     @ApiProperty({ description: 'Crime description (Tội danh)', example: 'Trom cap tai san' })
     @IsString()
     @IsNotEmpty()
-    crime: string; // Tội danh
+    crime!: string; // Tội danh
 
     @ApiPropertyOptional({ description: 'Decision number (Số ngày QĐ)', example: '123/2025/QĐ-BCA' })
     @IsString()

@@ -6,20 +6,20 @@ import { VerificationLevel } from '../../enums/verification-level.enum';
 @Entity('crime_reports')
 export class CrimeReport {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column({ nullable: true })
-    reporterId: string;
+    reporterId!: string;
 
     @ManyToOne(() => User)
     @JoinColumn({ name: 'reporterId' })
-    reporter: User;
+    reporter!: User;
 
     @Column({ nullable: true })
-    title: string;
+    title!: string;
 
     @Column('text', { nullable: true })
-    description: string;
+    description!: string;
 
     @Column({
         type: 'enum',
@@ -29,49 +29,49 @@ export class CrimeReport {
     type: CrimeType;
 
     @Column('decimal', { precision: 10, scale: 7, nullable: true })
-    lat: number;
+    lat!: number;
 
     @Column('decimal', { precision: 10, scale: 7, nullable: true })
-    lng: number;
+    lng!: number;
 
     @Column('geometry', { nullable: true })
-    geom: any;
+    geom!: any;
 
     @Column({ nullable: true })
-    address: string;
+    address!: string;
 
     @Column({ nullable: true })
-    areaCode: string;
+    areaCode!: string;
 
     @Column({ nullable: true })
-    province: string;
+    province!: string;
 
     @Column({ nullable: true })
-    district: string;
+    district!: string;
 
     @Column({ nullable: true })
-    ward: string;
+    ward!: string;
 
     @Column({ nullable: true })
-    street: string;
+    street!: string;
 
     @Column({ default: 'user' })
-    source: string;
+    source!: string;
 
     @Column('json', { nullable: true })
-    attachments: string[];
+    attachments!: string[];
 
     @Column({ type: 'smallint', default: 0 })
-    status: number;
+    status!: number;
 
     @Column({ type: 'smallint', default: 1 })
-    severity: number;
+    severity!: number;
 
     @Column({ type: 'timestamp', nullable: true })
-    reportedAt: Date;
+    reportedAt!: Date;
 
     @Column({ type: 'smallint', default: 0 })
-    trustScore: number; // 0-100 điểm tin cậy
+    trustScore!: number; // 0-100 điểm tin cậy
 
     @Column({
         type: 'enum',
@@ -81,20 +81,20 @@ export class CrimeReport {
     verificationLevel: VerificationLevel;
 
     @Column({ nullable: true })
-    verifiedBy: string; // Admin ID who manually verified
+    verifiedBy!: string; // Admin ID who manually verified
 
     @Column({ type: 'timestamp', nullable: true })
-    verifiedAt: Date;
+    verifiedAt!: Date;
 
     @Column({ type: 'int', default: 0 })
-    confirmationCount: number; // Số user confirm report này
+    confirmationCount!: number; // Số user confirm report này
 
     @Column({ type: 'int', default: 0 })
-    disputeCount: number; // Số user dispute report này
+    disputeCount!: number; // Số user dispute report này
 
     @CreateDateColumn()
-    createdAt: Date;
+    createdAt!: Date;
 
     @CreateDateColumn()
-    updatedAt: Date;
+    updatedAt!: Date;
 }

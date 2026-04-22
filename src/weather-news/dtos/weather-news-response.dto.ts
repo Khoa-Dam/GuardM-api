@@ -1,9 +1,9 @@
 import { WeatherNewsType } from '../entities/weather-news.entity';
 
 export class WeatherNewsResponseDto {
-    id: string;
-    type: WeatherNewsType;
-    title: string;
+    id!: string;
+    type!: WeatherNewsType;
+    title!: string;
     summary?: string;
     content?: string;
     imageUrl?: string;
@@ -11,7 +11,7 @@ export class WeatherNewsResponseDto {
     publishedDate?: Date;
     location?: string;
     severity?: string;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt!: Date;
+    updatedAt!: Date;
 }
 

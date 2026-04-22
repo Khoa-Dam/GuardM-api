@@ -3,28 +3,28 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 
 @Entity('push_subscriptions')
 export class PushSubscription {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Index()
     @Column()
-    userId: string;
+    userId!: string;
 
     @Column({ unique: true })
-    endpoint: string;
+    endpoint!: string;
 
     @Column('jsonb')
-    keys: { p256dh: string; auth: string };
+    keys!: { p256dh: string; auth: string };
 
     // User's last known location for proximity alerts
     @Column('float', { nullable: true })
-    lat: number | null;
+    lat!: number | null;
 
     @Column('float', { nullable: true })
-    lng: number | null;
+    lng!: number | null;
 
     @Column({ default: true })
-    active: boolean;
+    active!: boolean;
 
     @CreateDateColumn()
-    createdAt: Date;
+    createdAt!: Date;
 }

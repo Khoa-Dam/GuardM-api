@@ -9,13 +9,13 @@ export enum VoteType {
 @Index(['userId', 'reportId'], { unique: false })
 export class ReportVote {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column()
-    userId: string;
+    userId!: string;
 
     @Column()
-    reportId: string;
+    reportId!: string;
 
     @Column({
         type: 'enum',
@@ -24,6 +24,6 @@ export class ReportVote {
     voteType: VoteType;
 
     @CreateDateColumn()
-    createdAt: Date;
+    createdAt!: Date;
 }
 

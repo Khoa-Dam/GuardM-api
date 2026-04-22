@@ -3,20 +3,20 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
 @Entity('refresh_tokens')
 export class RefreshToken {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column()
-    token: string;
+    token!: string;
 
     @Column()
-    userId: string;
+    userId!: string;
 
     @Column()
-    expiryDate: Date;
+    expiryDate!: Date;
 
     @CreateDateColumn()
-    createdAt: Date;
+    createdAt!: Date;
 
     @UpdateDateColumn()
-    updatedAt: Date;
+    updatedAt!: Date;
 }

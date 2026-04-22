@@ -4,22 +4,22 @@ import { Role } from '../../auth/enums/role.enum';
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  name: string;
+  name!: string;
 
   @Column({ unique: true })
-  email: string;
+  email!: string;
 
   @Column({ type: 'varchar', nullable: true })
-  password: string | null;
+  password!: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  googleId: string | null;
+  googleId!: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  avatar: string | null;
+  avatar!: string | null;
 
   @Column({
     type: 'enum',

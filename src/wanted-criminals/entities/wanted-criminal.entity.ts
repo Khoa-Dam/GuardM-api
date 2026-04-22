@@ -3,30 +3,30 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeor
 @Entity('wanted_criminals')
 export class WantedCriminal {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column()
-    name: string; // Họ tên đối tượng
+    name!: string; // Họ tên đối tượng
 
     @Column()
-    birthYear: number; // Năm sinh
+    birthYear!: number; // Năm sinh
 
     @Column({ nullable: true })
-    address: string; // Nơi ĐKTT (Đăng ký thường trú)
+    address!: string; // Nơi ĐKTT (Đăng ký thường trú)
 
     @Column({ nullable: true })
-    parents: string; // Họ tên bố/mẹ
+    parents!: string; // Họ tên bố/mẹ
 
     @Column()
-    crime: string; // Tội danh
+    crime!: string; // Tội danh
 
     @Column({ nullable: true })
-    decisionNumber: string; // Số ngày QĐ
+    decisionNumber!: string; // Số ngày QĐ
 
     @Column({ nullable: true })
-    issuingUnit: string; // Đơn vị ra QĐTN (Quyết định truy nã)
+    issuingUnit!: string; // Đơn vị ra QĐTN (Quyết định truy nã)
 
     @CreateDateColumn()
-    createdAt: Date;
+    createdAt!: Date;
 }
 
