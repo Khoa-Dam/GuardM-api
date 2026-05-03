@@ -48,6 +48,7 @@ JWT_EXPIRES_IN=1h
 CLOUDINARY_NAME=your-cloud-name
 CLOUDINARY_API_KEY=your-api-key
 CLOUDINARY_API_SECRET=your-api-secret
+GRAFANA_ADMIN_PASSWORD=change-this-password
 NODE_ENV=development
 ```
 
@@ -116,10 +117,12 @@ pnpm run test
 
 ## Docker
 
-Start database:
+Start database and monitoring services:
 ```bash
 docker-compose up -d
 ```
+
+Prometheus is available at `http://localhost:9090` and scrapes the NestJS metrics endpoint at `http://api:3000/api/metrics` inside the Docker network. From your machine, the same API metrics endpoint is `http://localhost:3001/api/metrics`. Grafana is available at `http://localhost:4000` and uses `GRAFANA_ADMIN_PASSWORD` from `.env` for the admin password.
 
 Stop database:
 ```bash

@@ -7,5 +7,6 @@ Dockerfile
 docker-compose.yml
 test
 docs
+monitoring
 coverage
 .env

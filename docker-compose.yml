@@ -30,7 +30,7 @@ services:
 
   # --- SERVICE 2: DATABASE (POSTGIS) ---
   db:
-    image: postgis/postgis:16-3.4
+    image: postgis/postgis:17-3.5
     container_name: guardm_db
     restart: always
     # Load file .env để lấy user/pass tạo DB
@@ -50,5 +50,41 @@ services:
       timeout: 5s
       retries: 5
 
+  # --- SERVICE 3: PROMETHEUS ---
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: guardm_prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    depends_on:
+      - api
+
+  # --- SERVICE 4: GRAFANA ---
+  grafana:
+    image: grafana/grafana:latest
+    container_name: guardm_grafana
+    restart: always
+    ports:
+      - "4000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - "GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}"
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+
 volumes:
   pgdata:
+  prometheus_data:
+  grafana_data:

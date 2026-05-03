@@ -29,6 +29,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './config/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { GatewaysModule } from './gateways/gateways.module';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 
 @Module({
   imports: [
@@ -36,6 +37,10 @@ import { GatewaysModule } from './gateways/gateways.module';
       isGlobal: true,
       envFilePath: ['.env'],
       load: [configuration],
+    }),
+    PrometheusModule.register({
+      defaultMetrics: { enabled: true },
+      path: '/metrics',
     }),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
