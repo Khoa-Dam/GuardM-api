@@ -2,8 +2,10 @@ node_modules
 dist
 Dockerfile
 .git
+.github
 .gitignore
 docker-compose.yml
 test
 docs
+coverage
 .env
