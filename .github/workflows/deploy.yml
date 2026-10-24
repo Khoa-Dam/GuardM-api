@@ -64,6 +64,7 @@ jobs:
           IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}
 
           gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --project=${{ env.PROJECT_ID }} \
             --image $IMAGE:${{ github.sha }} \
             --region ${{ env.REGION }} \
             --platform managed \
