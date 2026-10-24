@@ -63,10 +63,9 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
           database: db.name,
           entities: [User, RefreshToken, CrimeReport, ReportVote, WantedCriminal, WeatherNews, PushSubscription, GlobalAlert],
           synchronize: true,
-          ssl: false,
-          // extra: (process.env.NODE_ENV === 'production' || process.env.DB_SSL === 'true')
-          //   ? { ssl: { rejectUnauthorized: false } }
-          //   : undefined,
+          ssl: process.env.DB_SSL === 'true'
+            ? { rejectUnauthorized: false }
+            : false,
         };
       },
     }),

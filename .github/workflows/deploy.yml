@@ -11,7 +11,7 @@ on:
       - 'monitoring/**'
 
 env:
-  PROJECT_ID: project-8183d858-7861-4159-b3b
+  PROJECT_ID: guardm-demo-202607030950
   REGION: asia-southeast1
   REPO_NAME: guardm-app
   IMAGE_NAME: guardm-api
@@ -69,16 +69,5 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --port 3000 \
-            --add-cloudsql-instances=project-8183d858-7861-4159-b3b:us-central1:guardm-db \
-            --set-env-vars="NODE_ENV=production" \
-            --set-env-vars="DB_HOST=/cloudsql/project-8183d858-7861-4159-b3b:us-central1:guardm-db" \
-            --set-env-vars="DB_PORT=5432" \
-            --set-env-vars="DB_USER=postgres" \
-            --set-env-vars="DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
-            --set-env-vars="DB_NAME=crime_alert" \
-            --set-env-vars="JWT_SECRET=${{ secrets.JWT_SECRET }}" \
-            --set-env-vars="JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}" \
-            --set-env-vars="CLOUDINARY_NAME=${{ secrets.CLOUDINARY_NAME }}" \
-            --set-env-vars="CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}" \
-            --set-env-vars="CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" \
-            --set-env-vars="GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}"
+            --clear-cloudsql-instances \
+            --update-env-vars="NODE_ENV=production,DB_HOST=aws-0-ap-northeast-2.pooler.supabase.com,DB_PORT=5432,DB_USER=postgres.ubhphpcrvfuwfrhzexcm,DB_NAME=postgres,DB_SSL=true"
