@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards, Put } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards, Put, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dtos/signup.dto';
@@ -38,6 +38,16 @@ export class AuthController {
     @ApiResponse({ status: 401, description: 'Invalid refresh token' })
     async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto) {
         return this.authService.refreshTokens(refreshTokenDto.refreshToken);
+    }
+
+    @Post('logout')
+    @HttpCode(200)
+    @ApiOperation({ summary: 'Revoke the current refresh token' })
+    @ApiBody({ type: RefreshTokenDto })
+    @ApiResponse({ status: 200, description: 'Refresh token revoked' })
+    async logout(@Body() refreshTokenDto: RefreshTokenDto) {
+        await this.authService.revokeRefreshToken(refreshTokenDto.refreshToken);
+        return { success: true };
     }
 
     @Post('google')

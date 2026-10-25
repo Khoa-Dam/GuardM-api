@@ -16,8 +16,8 @@ env:
   REPO_NAME: guardm-app
   IMAGE_NAME: guardm-api
   SERVICE_NAME: guardm-api
-  WORKLOAD_IDENTITY_PROVIDER: 'projects/992006419462/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
-  SERVICE_ACCOUNT: 'github-actions-sa@project-8183d858-7861-4159-b3b.iam.gserviceaccount.com'
+  WORKLOAD_IDENTITY_PROVIDER: 'projects/537826316026/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+  SERVICE_ACCOUNT: 'github-actions-sa@guardm-demo-202607030950.iam.gserviceaccount.com'
 
 jobs:
   deploy:

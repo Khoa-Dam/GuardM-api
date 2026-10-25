@@ -17,7 +17,7 @@ async function bootstrap() {
   app.enableCors({
     origin: isDev
       ? ['http://localhost:3000', 'http://127.0.0.1:3000']
-      : ['https://guardm.space'],
+      : ['https://guardm.space', 'https://www.guardm.space'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
   });

@@ -5,15 +5,14 @@ import {
     UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { SignupDto } from './dtos/signup.dto';
 import { LoginDto } from './dtos/login.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { MoreThan } from 'typeorm';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { Role } from './enums/role.enum';
 import { OAuth2Client } from 'google-auth-library';
 
@@ -153,31 +152,73 @@ export class AuthService {
         await this.userRepository.update(userId, {
             password: newHashedPassword,
         });
+
+        // Revoke all sessions after a password change.
+        await this.refreshTokenRepository.delete({ userId });
     }
 
     async refreshTokens(refreshToken: string) {
-        const token = await this.refreshTokenRepository.findOne({
+        const now = new Date();
+        const tokenHash = this.hashRefreshToken(refreshToken);
+        let storedToken = await this.refreshTokenRepository.findOne({
             where: {
-                token: refreshToken,
-                expiryDate: MoreThan(new Date()),
+                tokenHash,
+                expiryDate: MoreThan(now),
             },
         });
 
-        if (!token) {
+        // Accept existing plaintext rows once, then upgrade them to hashes.
+        if (!storedToken) {
+            const legacyToken = await this.refreshTokenRepository.findOne({
+                where: { tokenHash: refreshToken, expiryDate: MoreThan(now) },
+            });
+
+            if (legacyToken) {
+                const upgraded = await this.refreshTokenRepository.update(
+                    { id: legacyToken.id, tokenHash: refreshToken, expiryDate: MoreThan(now) },
+                    { tokenHash, expiryDate: this.getRefreshTokenExpiry() },
+                );
+
+                storedToken = upgraded.affected
+                    ? { ...legacyToken, tokenHash }
+                    : await this.refreshTokenRepository.findOne({
+                        where: { tokenHash, expiryDate: MoreThan(now) },
+                    });
+            }
+        }
+
+        // A concurrent request may have upgraded the legacy row after the first lookup.
+        if (!storedToken) {
+            storedToken = await this.refreshTokenRepository.findOne({
+                where: { tokenHash, expiryDate: MoreThan(now) },
+            });
+        }
+
+        if (!storedToken) {
             throw new UnauthorizedException('Refresh Token is invalid');
         }
 
         const user = await this.userRepository.findOne({
-            where: { id: token.userId },
+            where: { id: storedToken.userId },
         });
 
         if (!user) {
             throw new UnauthorizedException('User not found');
         }
 
-        const tokens = await this.generateUserTokens(token.userId);
+        // Keep the opaque refresh token stable for this session. Concurrent refresh
+        // calls therefore remain idempotent instead of racing to replace one another.
+        const renewed = await this.refreshTokenRepository.update(
+            { id: storedToken.id, tokenHash, expiryDate: MoreThan(now) },
+            { expiryDate: this.getRefreshTokenExpiry() },
+        );
+        if (!renewed.affected) {
+            throw new UnauthorizedException('Refresh Token is invalid');
+        }
+
         return {
-            ...tokens,
+            accessToken: this.createAccessToken(user.id, user.role),
+            refreshToken,
             userId: user.id,
             role: user.role,
         };
@@ -185,7 +226,7 @@ export class AuthService {
 
     async generateUserTokens(userId: string) {
         const user = await this.userRepository.findOne({ where: { id: userId }, select: ['id', 'role'] });
-        const accessToken = this.jwtService.sign({ userId, role: user?.role }, { expiresIn: '1h' });
+        const accessToken = this.createAccessToken(userId, user?.role);
         const refreshToken = randomUUID();
 
         await this.storeRefreshToken(refreshToken, userId);
@@ -196,28 +237,42 @@ export class AuthService {
     }
 
     async storeRefreshToken(token: string, userId: string) {
-        // Calculate expiry date 3 days from now
+        await this.refreshTokenRepository.delete({
+            userId,
+            expiryDate: LessThanOrEqual(new Date()),
+        });
+        await this.refreshTokenRepository.save({
+            tokenHash: this.hashRefreshToken(token),
+            userId,
+            expiryDate: this.getRefreshTokenExpiry(),
+        });
+    }
+
+    async revokeRefreshToken(refreshToken: string): Promise<void> {
+        const tokenHash = this.hashRefreshToken(refreshToken);
+        let storedToken = await this.refreshTokenRepository.findOne({ where: { tokenHash } });
+
+        // Allow logout from sessions issued before the hash-at-rest change.
+        if (!storedToken) {
+            storedToken = await this.refreshTokenRepository.findOne({ where: { tokenHash: refreshToken } });
+        }
+
+        if (storedToken) {
+            await this.refreshTokenRepository.delete(storedToken.id);
+        }
+    }
+
+    private hashRefreshToken(token: string): string {
+        return createHash('sha256').update(token).digest('hex');
+    }
+
+    private getRefreshTokenExpiry(): Date {
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + 3);
+        return expiryDate;
+    }
 
-        // Find existing refresh token for user
-        const existingToken = await this.refreshTokenRepository.findOne({
-            where: { userId },
-        });
-
-        if (existingToken) {
-            // Update existing token
-            await this.refreshTokenRepository.update(existingToken.id, {
-                token,
-                expiryDate,
-            });
-        } else {
-            // Create new token
-            await this.refreshTokenRepository.save({
-                token,
-                userId,
-                expiryDate,
-            });
-        }
+    private createAccessToken(userId: string, role: Role | undefined): string {
+        return this.jwtService.sign({ userId, role }, { expiresIn: '1h' });
     }
 }

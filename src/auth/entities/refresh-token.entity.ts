@@ -1,12 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 @Entity('refresh_tokens')
+@Index('IDX_refresh_tokens_token_hash', ['tokenHash'], { unique: true })
 export class RefreshToken {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
 
-    @Column()
-    token!: string;
+    @Column({ name: 'token' })
+    tokenHash!: string;
 
     @Column()
     userId!: string;
